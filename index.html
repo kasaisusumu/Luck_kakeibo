@@ -1,14 +1,1180 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+	<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2LX0ZH24TN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-2LX0ZH24TN');
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ランダムマップ＆キャラクター移動</title>
-    <link rel="stylesheet" href="style.css">
+    <title>ラック家計簿</title>
+   <style>
+   /* Luck家計簿ボタンをh1サイズに */
+        #toggleDescriptionBtn {
+            font-size: 2em;  /* h1相当の大きさ */
+            font-weight: bold;
+            text-align: center;
+            display: block;  /* ブロック要素にして中央寄せ */
+            margin: 20px auto;  /* 上下に余白をつける */
+            padding: 10px 20px;
+            border: none;
+            background-color: #4CAF50; /* 青系 */
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        /* ボタンのホバーエフェクト */
+        #toggleDescriptionBtn:hover {
+            background-color: #4CAF50;
+        }
+
+        /* 説明エリア */
+        #descriptionSection {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+     /* 表部分をスクロール可能にする */
+    .scrollable-table {
+        max-height: 200px; /* 高さを制限（5行分の高さに合わせて調整） */
+        overflow-y: auto; /* 縦スクロールを有効にする */
+        margin-top: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+		width: 100%; /* 表の横幅を75%に設定 */
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .scrollable-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .scrollable-table th, .scrollable-table td {
+        padding: 1px; /* スマホは1px */
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    
+	.scrollable-table th {
+        background-color: #f4f4f4;
+        position: sticky;
+        top: 0;
+        z-index: 1; /* ヘッダーがスクロールされないように上に表示されるようにする */
+    }
+   /* ボタンの横並び設定 */
+    .button-group {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px; /* ボタン間のスペース */
+        margin-bottom: 16px;
+    }
+
+    .button-group button {
+        flex: 1; /* 各ボタンの幅を均等にする */
+        padding: 12px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s;
+    }
+
+    .button-group button:hover {
+        background-color: #45a049;
+        transform: scale(1.05);
+    }
+
+    .button-group button:active {
+        transform: scale(0.98);
+    }
+    /* 全体のスタイル */
+    body {
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f7f7f7;
+        color: #333;
+    }
+
+    /* ヘッダー */
+    h1 {
+        text-align: center;
+        background-color: #4CAF50;
+        color: white;
+        margin: 0;
+        padding: 16px 0;
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    /* 共通カードデザイン */
+    .card {
+        background-color: white;
+        padding: 15px;
+        margin: 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    /* ボタンのスタイル */
+    button {
+        width: 100%;
+        padding: 14px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        margin-top: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s;
+    }
+
+    button:hover {
+        background-color: #45a049;
+        transform: scale(1.05);
+    }
+
+    button:active {
+		background-color: #45a049;
+        transform: scale(1.05);
+    }
+	.toggle-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    background-color: #ddd;
+    transition: all 0.3s ease;
+}
+
+.toggle-btn.active {
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #4CAF50;
+    color: white;
+    transform: scale(1.1);
+}
+
+.toggle-btn:not(.active) {
+    opacity: 0.6;
+}
+
+
+    /* 入力フィールド */
+    .input-group input,
+    .textInput,
+    #budgetInput,
+    #storeInput,
+    #dateInput,
+    #amountInput,
+    #initialAssetsInput {
+        width: 100%;
+        padding: 14px;
+        margin: 8px 0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        box-sizing: border-box;
+        background-color: #fff;
+    }
+
+    /* レスポンシブ対応 */
+    @media (max-width: 768px) {
+        .card {
+            margin: 12px;
+            padding: 12px;
+        }
+
+        h1 {
+            font-size: 22px;
+        }
+
+        button {
+            font-size: 14px;
+            padding: 12px;
+        }
+    }
+
+    /* 支出/収入詳細セクション */
+    .details-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .details-container div {
+        flex: 1;
+    }
+
+    /* 詳細ボタン */
+    .details-button {
+        padding: 12px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.3s ease;
+        font-size: 14px;
+    }
+
+    .details-button:hover {
+        background-color: #45a049;
+    }
+
+    .details {
+		 max-height: 300px; /* 必要に応じて調整 */
+    overflow-y: auto; /* 縦スクロール可能に */
+        padding: 15px;
+        background-color: #f9f9f9;
+        margin-top: 12px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 予算、全財産額関連 */
+    .budget-info, .total-assets {
+        background-color: white;
+        padding: 15px;
+        margin-top: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .budget-info h3, .total-assets h3 {
+        margin-top: 0;
+        color: #4CAF50;
+    }
+
+    /* 初期財産入力フォーム */
+    .initial-assets-section input {
+        padding: 14px;
+        margin-top: 8px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    /* ボックスの影響 */
+    .card input,
+    .card button {
+        transition: 0.2s ease-in-out;
+    }
+
+    /* 全体コンテナ */
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 16px;
+    }
+
+    /* アイコンやボタンの間隔 */
+    .button-group {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+
+
+
+
+
+
+
+
+
+        .today-row {
+    background-color: #e0f7e0; /* 薄い緑色 */
+}
+ /* 横並びで表示するスタイル */
+    .details-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;<!-- 20 -->
+    }
+
+    .details {
+        width: 100%;  /* 横並びで2つの詳細が並ぶように */ <!-- 48% -->
+		margin-right: 0px; /* ここでボタン間隔を狭くします10 */
+        margin-left: 0px; /* 左側の余白も少し調整10 */
+        padding: 10px ;<!-- 10 -->
+        border: 5px solid #ddd;<!-- 1 -->
+        border-radius: 10px;<!-- 5 -->
+        box-shadow: 4 2px 5px rgba(0,0,0,0.1);<!-- 0 2px 5px rgba(0,0,0,0.1); -->
+    }
+
+    .details-button {
+        margin-top: 20px;<!-- 20 -->
+		margin-right: 0px; /* ここでボタン間隔を狭くします10 */
+        margin-left: 10px; /* 左側の余白も少し調整10 */
+        padding: 10px ;<!-- 10px 20px -->
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+ /* 収入詳細ボタンを左にずらす */
+    #incomeDetailsButton {
+        margin-left: 0; /* 左の余白をなくして左に寄せる */
+		margin-right: 0; /* ここでボタン間隔を狭くします10 */
+    }
+    .details-button:hover {
+        background-color: #45a049;
+    }
+		body {
+            font-family: 'ふい字', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+        }
+
+        h2, h3 {
+            font-size: 1.5rem;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #333;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        .delete-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .negative {
+            color: red;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .input-group input {
+            padding: 5px;
+            font-size: 1rem;
+        }
+
+        .textInput {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        #details {
+            margin-top: 20px;
+        }
+
+        .budget-info {
+            margin-top: 20px;
+        }
+
+        .total-assets {
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
+
+        .initial-assets-section {
+            margin-top: 20px;
+        }
+
+        .initial-assets-section input {
+            padding: 5px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+.negative {
+    color: red;
+}
+.input-group {
+    display: flex;
+    flex-direction: column; /* 各アイテムを縦に並べる */
+    gap: 10px; /* 各入力項目の間隔 */
+}
+
+.input-item {
+    display: flex; /* 横並びにする */
+    align-items: center; /* 中央揃え */
+    gap: 10px; /* ラベルと入力欄の間隔 */
+}
+
+.input-item label {
+    margin: 0; /* ラベルの余白をなくす */
+}
+
+.input-item input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    flex-grow: 1; /* 入力欄がラベルと横並びに収まるように調整 */
+}
+
+
+
+    </style>
+    <script>
+		function formatAmount(value) {
+    return Math.abs(value).toLocaleString(); // 絶対値を取得してカンマ区切りにする
+}
+
+        // ローカルストレージから予算を取得
+        function getBudget() {
+            return JSON.parse(localStorage.getItem('dailyBudget')) || 0;
+        }
+
+        // ローカルストレージに予算を保存
+        function setBudget(budget) {
+            localStorage.setItem('dailyBudget', JSON.stringify(budget));
+            fetchData();
+			applyMonthFilter();
+        }
+
+        // 初期全財産を取得
+        function getTotalAssets() {
+            return JSON.parse(localStorage.getItem('totalAssets')) || 0;
+        }
+
+        // 日付ごとの予算データを取得
+        function getDailyBudgets() {
+            return JSON.parse(localStorage.getItem('dailyBudgets')) || {};
+        }
+
+        // 日付ごとの予算を保存
+        function setDailyBudgets(budgets) {
+            localStorage.setItem('dailyBudgets', JSON.stringify(budgets));
+        }
+
+        // 存在しない日付を補完
+        function fillMissingDates(existingDates, dailyTotal) {
+            let allDates = [];
+            let sortedDates = existingDates.slice().sort((a, b) => {
+                let aDate = a.replace(/月/g, '/').replace(/日/g, '');
+                let bDate = b.replace(/月/g, '/').replace(/日/g, '');
+                return new Date('2025/' + aDate) - new Date('2025/' + bDate);  // 年を仮定
+            });
+
+            for (let i = 0; i < sortedDates.length - 1; i++) {
+                let startDate = new Date('2025/' + sortedDates[i].replace(/月/g, '/').replace(/日/g, ''));
+                let endDate = new Date('2025/' + sortedDates[i + 1].replace(/月/g, '/').replace(/日/g, ''));
+
+                // 開始日と終了日の日付を補完
+                while (startDate < endDate) {
+                    startDate.setDate(startDate.getDate() + 1);
+                    let formattedDate = (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日";
+                    if (!existingDates.includes(formattedDate)) {
+                        dailyTotal[formattedDate] = 0;
+                        existingDates.push(formattedDate);
+                    }
+                }
+            }
+
+            return existingDates;
+        }
+
+        // ローカルストレージから保存されたデータを取得して表示
+    // 詳細情報の表示・非表示を切り替える
+        function toggleExpenseDetails() {
+            let expenseDetails = document.getElementById('expenseDetails');
+            if (expenseDetails.style.display === "none") {
+                expenseDetails.style.display = "block";
+            } else {
+                expenseDetails.style.display = "none";
+            }
+        }
+
+        function toggleIncomeDetails() {
+            let incomeDetails = document.getElementById('incomeDetails');
+            if (incomeDetails.style.display === "none") {
+                incomeDetails.style.display = "block";
+            } else {
+                incomeDetails.style.display = "none";
+            }
+        }
+
+        // fetchData 関数内で支出詳細と収入詳細を作成
+        // 金額をカンマ付きで表示する関数
+function formatAmount(amount) {
+    return new Intl.NumberFormat().format(amount);
+}
+// "ペースト"ボタンが押された時の処理
+function pastePayPayHistory() {
+    navigator.clipboard.readText()
+        .then(text => {
+            // クリップボードの内容をテキストエリアに貼り付け
+            document.querySelector('.textInput').value = text;
+        })
+        .catch(err => {
+            alert("クリップボードの読み込みに失敗しました。");
+        });
+}
+function scrollToBottom() {
+    let expenseDetails = document.getElementById('expenseDetails');
+    let incomeDetails = document.getElementById('incomeDetails');
+    if (expenseDetails) {
+        expenseDetails.scrollTop = expenseDetails.scrollHeight;
+    }
+    if (incomeDetails) {
+        incomeDetails.scrollTop = incomeDetails.scrollHeight;
+    }
+}
+// ページが読み込まれたときに今月のデータを表示する
+window.onload = function() {
+	scrollToBottom() 
+    // 今日の日付を取得
+    let today = new Date();
+    
+    // 現在の月（YYYY-MM形式）
+    let currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0');  // 例: 2025-03
+    
+    // 初期値として selectMonth を currentMonth に設定
+    let selectMonth = currentMonth;
+
+    // 月選択欄に現在の月をセット
+    document.getElementById('monthSelect').value = selectMonth;
+
+    // 今月のデータを表示
+    fetchData(selectMonth, 'currentMonth');
+};
+
+// 月選択後、データをフィルタリングして表示
+function applyMonthFilter() {
+    let selectedMonth = document.getElementById('monthSelect').value;
+
+    // 月が選択された場合、選択された月のデータのみ表示
+    if (selectedMonth) {
+        fetchData(selectedMonth, 'selectedMonth');
+    } else {
+        // 現在の月のデータのみ表示
+        fetchData(currentMonth, 'currentMonth');
+    }
+}
+
+
+// 月ごとにデータをフィルタリングして表示
+function fetchData(month, monthType) {
+    let data = JSON.parse(localStorage.getItem('paymentData')) || [];
+
+    // まず削除ボタンを表示
+    let dataWithDeleteButtons = data.map((entry, index) => {
+        return {
+            ...entry,
+            deleteButton: `<button class="delete-btn" onclick="deleteEntry(${index})">削除</button>`
+        };
+    });
+
+    // 月ごと、支出か収入かでデータを振り分ける
+    let expenses = dataWithDeleteButtons.filter(entry => entry.amount < 0);
+    let incomes = dataWithDeleteButtons.filter(entry => entry.amount > 0);
+
+    let dailyTotal = { expense: {}, income: {} };
+    let existingDates = [];
+    let dailyBudgets = getDailyBudgets();
+    let totalAssets = getTotalAssets(); // 初期全財産
+
+    // 今日の日付を取得
+    let today = new Date();
+    let currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0');  // 例: 2025-03
+
+    // データを月ごとにフィルタリング
+    dataWithDeleteButtons.forEach((entry) => {
+        let store = entry.store || "不明";
+        let date = entry.date || "不明";
+        let amount = entry.amount || 0;
+
+        // 月が一致するデータだけを選択
+        if (date !== "不明" && amount !== 0) {
+            let entryMonth = date.split("月")[0].padStart(2, '0');  // 月を2桁で抽出
+
+            // selectedMonth が currentMonth と一致する場合
+            if ((monthType === 'currentMonth' && currentMonth === '2025-' + entryMonth) ||
+                (monthType === 'selectedMonth' && month === '2025-' + entryMonth)) {
+
+                if (!dailyTotal.expense[date]) {
+                    dailyTotal.expense[date] = 0;
+                    dailyTotal.income[date] = 0;
+                }
+
+                if (amount < 0) {
+                    dailyTotal.expense[date] += amount;
+                } else {
+                    dailyTotal.income[date] += amount;
+                }
+
+                if (!existingDates.includes(date)) {
+                    existingDates.push(date);
+                }
+            }
+        }
+    });
+
+    existingDates = fillMissingDates(existingDates, dailyTotal);
+
+    existingDates.sort((a, b) => {
+        let aDate = a.replace(/月/g, '/').replace(/日/g, '');
+        let bDate = b.replace(/月/g, '/').replace(/日/g, '');
+        return new Date('2025/' + aDate) - new Date('2025/' + bDate);
+    });
+
+    let summary = "<table><tr><th>日付</th><th>支出合計</th><th>収入合計</th><th>予算比累計</th><th>全財産の推移</th></tr>";
+
+    let fixedBudget = getBudget();
+    let newDailyBudgets = {};
+    let cumulativeBudget = 0;
+    let todayDate = (today.getMonth() + 1) + "月" + today.getDate() + "日";
+
+    existingDates.forEach(date => {
+        let spentAmount = dailyTotal.expense[date] || 0;
+        let incomeAmount = dailyTotal.income[date] || 0;
+
+        cumulativeBudget += fixedBudget + spentAmount + incomeAmount;
+        newDailyBudgets[date] = cumulativeBudget;
+
+        totalAssets += incomeAmount;
+        totalAssets -= -spentAmount;
+
+        let todayClass = (date === todayDate) ? 'today-row' : '';
+
+        if (new Date('2025/' + date.replace(/月/g, '/').replace(/日/g, '')) > today) {
+            totalAssets -= fixedBudget;
+        }
+
+        // 予算比累計と全財産がマイナスの時に赤色表示
+        let budgetClass = cumulativeBudget < 0 ? 'negative' : '';
+        let assetsClass = totalAssets < 0 ? 'negative' : '';
+
+        // 表示用の「月/日」形式に変更
+        let displayDate = date.replace(/月/g, '/').replace(/日/g, '');
+
+        spentAmount *= -1;
+
+        summary += `<tr class="${todayClass}">
+                    <td>${displayDate}</td>
+                    <td>¥${formatAmount(Math.abs(spentAmount))}</td>
+                    <td>¥${formatAmount(incomeAmount)}</td>
+                    <td class="${budgetClass}">¥${formatAmount(cumulativeBudget)}</td>
+                    <td class="${assetsClass}">¥${formatAmount(totalAssets)}</td>
+                </tr>`;
+
+        // 再度符号を反転（元に戻す）
+        spentAmount *= -1;
+        dailyBudgets[date] = cumulativeBudget;
+    });
+
+    summary += "</table>";
+    document.getElementById('summary').innerHTML = summary;
+
+    // **支出リストの作成 (日付でフィルタリング)**
+    let expenseDetailsContent = expenses.filter((result) => existingDates.includes(result.date))
+        .map((result, index) =>
+            `<div>
+                <p>店名: ${result.store === "不明" ? `<button onclick="requestCorrection('store', ${index}, true)">不明</button>` : result.store}</p>
+                <p>日付: ${result.date === "不明" ? `<button onclick="requestCorrection('date', ${index}, true)">不明</button>` : result.date}</p>
+                <p>金額: ${result.amount === 0 ? `<button onclick="requestCorrection('amount', ${index}, true)">不明</button>` : '¥' + formatAmount(Math.abs(result.amount))}</p>
+                ${result.deleteButton}  <!-- 削除ボタン -->
+                <br><br>
+            </div>`).join("");
+
+    // **収入リストの作成 (日付でフィルタリング)**
+    let incomeDetailsContent = incomes.filter((result) => existingDates.includes(result.date))
+        .map((result, index) =>
+            `<div>
+                <p>店名: ${result.store === "不明" ? `<button onclick="requestCorrection('store', ${index}, false)">不明</button>` : result.store}</p>
+                <p>日付: ${result.date === "不明" ? `<button onclick="requestCorrection('date', ${index}, false)">不明</button>` : result.date}</p>
+                <p>金額: ${result.amount === 0 ? `<button onclick="requestCorrection('amount', ${index}, false)">不明</button>` : '¥' + formatAmount(Math.abs(result.amount))}</p>
+                ${result.deleteButton}  <!-- 削除ボタン -->
+                <br><br>
+            </div>`).join("");
+
+    document.getElementById('expenseDetails').innerHTML = expenseDetailsContent;
+    document.getElementById('incomeDetails').innerHTML = incomeDetailsContent;
+
+    document.getElementById('budgetDisplay').innerHTML = `現在の予算: ¥${formatAmount(fixedBudget)}`;
+    document.getElementById('totalAssetsDisplay').innerHTML = `最終日の全財産: ¥${formatAmount(totalAssets)}`;
+
+scrollToBottom() 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// **削除関数**
+function deleteEntry(index) {
+    let data = JSON.parse(localStorage.getItem('paymentData')) || [];
+    let filteredData = data.filter((entry, i) => i !== index);
+
+    // ローカルストレージに更新されたデータを保存
+    localStorage.setItem('paymentData', JSON.stringify(filteredData));
+
+    // 削除後、再度データを表示
+    fetchData();
+    applyMonthFilter();
+}
+
+// 入力内容をローカルストレージに保存
+function extractInfo() {
+    let inputs = document.querySelectorAll('.textInput');
+    let entries = [];
+
+    // 入力内容を取り出し、空欄を除外
+    inputs.forEach(input => {
+        if (input.value.trim()) {
+            entries.push(input.value.trim());
+        }
+    });
+
+    let newData = [];
+    entries.forEach(entry => {
+        // 店名を正規表現で抽出
+        let storeMatch = entry.match(/(.+?)\s*(に支払い|の.*?支)/); // 店名キャッチ
+        let dateMatch = entry.match(/(\d{1,2}月\d{1,2}日)\s*\d{1,2}時\d{1,2}分\d{1,2}秒/); // 日付抽出
+        let amountMatch = entry.match(/(\d+,?\d*)円/);  // 金額抽出
+        
+        let store = storeMatch ? storeMatch[1] : "不明";  // 店名
+        let date = dateMatch ? dateMatch[1] : "不明";  // 日付
+        let amount = amountMatch ? parseInt(amountMatch[1].replace(/,/g, ''), 10) : 0;  // 金額
+
+        // 日付と金額が正しく取得できていれば、新しいデータを追加
+        if (date !== "不明" && amount > 0) {
+            newData.push({ store, date, amount: -amount, type: 'expense' }); // 支出データとして保存
+        }
+    });
+
+    // 現在のデータを取得し、新しいデータを追加
+    let currentData = JSON.parse(localStorage.getItem('paymentData')) || [];
+    currentData.push(...newData);
+
+    // データが不完全だった場合、入力内容をローカルストレージに保存
+    if (newData.length === 0) {
+        // 入力が不完全な場合、フォームの内容をローカルストレージに保存
+        savePendingInput(entries);
+    } else {
+        // 完成したデータをローカルストレージに保存
+        localStorage.setItem('paymentData', JSON.stringify(currentData));
+        fetchData();
+        applyMonthFilter();
+        inputs.forEach(input => input.value = "");  // 入力欄をリセット
+
+        // 初めてデータが追加された場合にアセットをリクエスト
+        if (currentData.length === 1) {
+            requestInitialAssets();
+        }
+    }
+}
+
+
+window.onload = function() {
+    // 初期状態で PayPay フォームを表示
+    toggleForm('paypay');
+
+    // 初期状態で PayPay ボタンに active クラスを付ける
+    document.getElementById('paypayBtn').classList.add('active');
+};
+
+function toggleForm(form) {
+    // すべてのフォームを非表示にする
+    document.getElementById('paypayForm').style.display = 'none';
+    document.getElementById('manualForm').style.display = 'none';
+    document.getElementById('yosanForm').style.display = 'none';
+
+    // すべてのボタンの active クラスを削除
+    document.getElementById('paypayBtn').classList.remove('active');
+    document.getElementById('manualBtn').classList.remove('active');
+    document.getElementById('yosanBtn').classList.remove('active');
+
+
+    // 選択されたフォームを表示
+    if (form === 'paypay') {
+        document.getElementById('paypayForm').style.display = 'block';
+        document.getElementById('paypayBtn').classList.add('active');
+    } else if (form === 'manual') {
+        document.getElementById('manualForm').style.display = 'block';
+        document.getElementById('manualBtn').classList.add('active');
+    } else if (form === 'yosan') {
+        document.getElementById('yosanForm').style.display = 'block';
+        document.getElementById('yosanBtn').classList.add('active');
+    }
+}
+
+
+
+        // 支出と収入を切り替える
+        let isExpense = true;
+
+        function toggleIncomeExpense() {
+            isExpense = !isExpense;
+            updateInputLabels();
+        }
+
+        function updateInputLabels() {
+            let expenseIncomeText = isExpense ? "支出" : "収入";
+            let buttonText = isExpense ? "支出の記入" : "収入の記入";
+            document.getElementById('inputButton').innerText = buttonText;
+            document.getElementById('inputLabel').innerText = expenseIncomeText ;
+        }
+
+        // 入力した情報をローカルストレージに保存
+        function addManualEntry() {
+            let store = document.getElementById('storeInput').value.trim();
+            let date = document.getElementById('dateInput').value.trim();
+            let amount = parseInt(document.getElementById('amountInput').value.trim(), 10);
+
+            if (store && date && !isNaN(amount)) {
+                // 入力日付を「月/日」の形式に変換
+                let formattedDate = formatDate(date);
+
+                // 支出か収入かを判断して入力を保存
+                let newEntry = { store, date: formattedDate, amount: isExpense ? -amount : amount };
+                let currentData = JSON.parse(localStorage.getItem('paymentData')) || [];
+                currentData.push(newEntry);
+                localStorage.setItem('paymentData', JSON.stringify(currentData));
+
+                fetchData();
+				applyMonthFilter();
+
+                // 入力フィールドをクリア
+                document.getElementById('storeInput').value = '';
+                document.getElementById('dateInput').value = '';
+                document.getElementById('amountInput').value = '';
+				
+				// 最初のエントリが追加された場合、全財産額を入力するフォームを表示
+				if (currentData.length === 1) {
+					requestInitialAssets();
+				}
+            } else {
+                alert('すべてのフィールドに有効な情報を入力してください');
+            }
+        }
+
+        function formatDate(date) {
+            let parts = date.split('/');
+            let month = parts[0];
+            let day = parts[1];
+            return `${month}月${day}日`;
+        }
+
+        // 予算を設定
+        function setDailyBudget() {
+            let budget = parseInt(document.getElementById('budgetInput').value, 10);
+            if (isNaN(budget) || budget <= 0) {
+                alert("有効な予算を入力してください");
+                return;
+            }
+            setBudget(budget);  // 予算の更新
+			fetchData();
+			applyMonthFilter();
+			
+        }
+
+       // 正しいデータを更新する関数
+function updateEntry(index, newAmount, newDate, newDescription) {
+    let currentData = JSON.parse(localStorage.getItem('paymentData')) || [];
+
+    if (index < 0 || index >= currentData.length) {
+        console.error("無効なインデックスです");
+        return;
+    }
+
+    // 数値のバリデーション
+    let parsedAmount = parseInt(newAmount, 10);
+    if (isNaN(parsedAmount)) {
+        alert("金額は数字で入力してください");
+        return;
+    }
+
+    // データを更新
+    currentData[index].amount = parsedAmount;
+    currentData[index].date = newDate;
+    currentData[index].description = newDescription || "";
+
+    // データを保存
+    localStorage.setItem('paymentData', JSON.stringify(currentData));
+
+    // 変更後にデータを再取得
+    fetchData();
+	applyMonthFilter();
+}
+
+
+
+
+
+
+        // 特定のエントリを削除
+   
+
+
+
+
+
+
+
+
+        // 全財産額の入力フォームを表示
+        function requestInitialAssets() {
+            let assetsSection = document.getElementById('initialAssetsSection');
+            assetsSection.style.display = 'block';
+        }
+
+        function saveInitialAssets() {
+            let initialAssets = document.getElementById('initialAssetsInput').value.trim();
+            if (initialAssets && !isNaN(initialAssets)) {
+                localStorage.setItem('totalAssets', JSON.stringify(parseInt(initialAssets, 10)));
+                fetchData();
+			applyMonthFilter();
+                document.getElementById('initialAssetsSection').style.display = 'none'; // 非表示
+            } else {
+                alert("全財産額を正しく入力してください");
+            }
+        }
+
+        window.onload = fetchData;
+    </script>
 </head>
 <body>
-    <h1>ランダムマップでキャラ移動</h1>
-    <div id="game-container"></div>
-    <script src="script.js"></script>
+<button id="toggleDescriptionBtn" onclick="toggleDescription()">説明欄を閉じる</button>
+
+<!-- 説明エリア（初期状態は非表示） -->
+<div id="descriptionSection" style="display: block;">
+    <p>Luck家計簿は、PayPayから5タップで店名，日付，金額を記録できます。</p>
+<p>30秒で終わる導入方法は <a href="https://note.com/chokin_taisetsu/n/nd26dab76ea5c?sub_rt=share_pb" target="_blank">こちら</a></p>
+</div>
+
+<script>
+// ページ読み込み時に前回の状態をチェック
+const descriptionState = localStorage.getItem('descriptionState');
+    if (descriptionState === 'closed') {
+        document.getElementById('descriptionSection').style.display = 'none';
+        document.getElementById('toggleDescriptionBtn').textContent = 'ラック家計簿';
+    }
+window.onload = function() {
+    const descriptionState = localStorage.getItem('descriptionState');
+    if (descriptionState === 'closed') {
+        document.getElementById('descriptionSection').style.display = 'none';
+        document.getElementById('toggleDescriptionBtn').textContent = 'ラック家計簿';
+    }
+};
+
+// 説明エリアの表示/非表示を切り替える
+function toggleDescription() {
+    const descriptionSection = document.getElementById('descriptionSection');
+    const toggleButton = document.getElementById('toggleDescriptionBtn');
+
+    if (descriptionSection.style.display === 'none') {
+        descriptionSection.style.display = 'block';
+        toggleButton.textContent = '説明欄を閉じる';
+        localStorage.setItem('descriptionState', 'open'); // 開いた状態を保存
+    } else {
+        descriptionSection.style.display = 'none';
+        toggleButton.textContent = 'ラック家計簿';
+        localStorage.setItem('descriptionState', 'closed'); // 閉じた状態を保存
+    }
+}
+</script>
+
+
+
+
+
+
+
+	<script>
+	window.onload = function() {
+    // 初期状態で PayPay フォームを表示
+    toggleForm('paypay');
+	
+	// 今日の日付を取得
+    let today = new Date();
+    
+    // 現在の月（YYYY-MM形式）
+    let currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0');  // 例: 2025-03
+    
+    // 初期値として selectMonth を currentMonth に設定
+    let selectMonth = currentMonth;
+
+    // 月選択欄に現在の月をセット
+    document.getElementById('monthSelect').value = selectMonth;
+
+    // 今月のデータを表示
+    fetchData(selectMonth, 'currentMonth');
+
+    
+};
+
+	</script>
+    <!-- 切り替えボタン -->
+        <div class="button-group">
+    <button id="paypayBtn" class="toggle-btn" onclick="toggleForm('paypay')">PayPayから追加</button>
+<button id="manualBtn" class="toggle-btn" onclick="toggleForm('manual')">手入力フォーム</button>
+<button id="yosanBtn" class="toggle-btn" onclick="toggleForm('yosan')">予算を設定</button>
+</div>
+    <div>
+	<!-- PayPayフォーム -->
+        <div class="card" id="paypayForm" >
+    <h3>PayPayから追加</h3>
+    <div>
+        <!-- "ペースト"ボタンを追加 -->
+<button onclick="pastePayPayHistory()">ペースト</button>
+
+<!-- PayPayの履歴入力欄 -->
+<textarea class="textInput" placeholder="PayPayの履歴情報をここにペーストしてください"></textarea>
+<button onclick="extractInfo()">情報を追加</button>
+
+    </div>
+	</div>
+	<!-- 手入力フォーム -->
+        <div class="card" id="manualForm"style="display:none;">
+        <h2>手動で支払い情報を追加</h2>
+        <!-- 切り替えボタン -->
+        <button onclick="toggleIncomeExpense()">支出と収入を切り替える</button>
+        <div class="input-group">
+   <div class="input-group">
+    <div class="input-item">
+        <label for="storeInput">店名:</label>
+        <input type="text" id="storeInput" placeholder="店名を入力">
+    </div>
+    <div class="input-item">
+        <label for="dateInput">日付:</label>
+        <input type="text" id="dateInput" placeholder="MM/DD">
+    </div>
+    <div class="input-item">
+        <label id="inputLabel" for="amountInput">支出:</label>
+        <input type="number" id="amountInput" placeholder="金額を入力">
+    </div>
+</div>
+</div>
+		<button id="inputButton" onclick="addManualEntry()">追加</button>
+    </div>
+	
+	<!-- 予算フォーム -->
+        <div class="card" id="yosanForm" style="display:none;">
+	<div>
+        <h2>1日当たりの予算を設定</h2>
+        <input type="number" id="budgetInput" placeholder="予算を入力">
+        <button onclick="setDailyBudget()">予算を設定</button>
+    </div>
+	</div>
+	
+    
+    <!-- 全財産額入力 -->
+    <div id="initialAssetsSection" class="initial-assets-section" style="display:none;">
+        <label for="initialAssetsInput">最初の全財産額を入力してください:</label>
+        <input type="number" id="initialAssetsInput" placeholder="全財産額を入力">
+        <button onclick="saveInitialAssets()">保存</button>
+    </div>
+	
+	
+   <!-- 月選択欄 -->
+<div>
+    <label for="monthSelect">月を選択:</label>
+    <input type="month" id="monthSelect" onchange="applyMonthFilter()">
+</div>
+	
+	<h3 style="display: inline;">日付ごとの集計</h3>
+<div id="budgetDisplay" class="budget-info"></div>
+      <!-- 表部分（5行のみ表示し、スクロール可能にする） -->
+        <div class="scrollable-table">
+		
+    
+    <div id="summary"></div>
+            
+
+    </div>
+ <!-- 支出収入詳細を横並びで表示 -->
+    <div class="details-container">
+        <div>
+            <button onclick="toggleExpenseDetails()" class="details-button">支出詳細</button>
+            <div id="expenseDetails" class="details"></div>
+        </div>
+        <div>
+            <button onclick="toggleIncomeDetails()" class="details-button">収入詳細</button>
+            <div id="incomeDetails" class="details"></div>
+        </div>
+    </div>
+    
+
+	<!-- 修正フォーム -->
+    <div id="correctionSection"></div>
+	
+     <div id="budgetDisplay" class="budget-info"></div>
+    <div id="totalAssetsDisplay" class="total-assets"></div>
+    <div id="details"></div>
+    <div id="summary"></div>
+
+    <div id="summary"></div>
 </body>
 </html>
