@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-	<!-- Google tag (gtag.js) -->
+<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-2LX0ZH24TN"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -9,11 +9,14 @@
   gtag('js', new Date());
 
   gtag('config', 'G-2LX0ZH24TN');
-</script>
+  </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ラック家計簿</title>
    <style>
+   .today-row {
+    background-color: #e0f7e0; /* 薄い緑色 */
+}
    /* Luck家計簿ボタンをh1サイズに */
         #toggleDescriptionBtn {
             font-size: 2em;  /* h1相当の大きさ */
@@ -303,9 +306,7 @@
 
 
 
-        .today-row {
-    background-color: #e0f7e0; /* 薄い緑色 */
-}
+        
  /* 横並びで表示するスタイル */
     .details-container {
         display: flex;
@@ -510,31 +511,41 @@
         }
 
         // 存在しない日付を補完
-        function fillMissingDates(existingDates, dailyTotal) {
-            let allDates = [];
-            let sortedDates = existingDates.slice().sort((a, b) => {
-                let aDate = a.replace(/月/g, '/').replace(/日/g, '');
-                let bDate = b.replace(/月/g, '/').replace(/日/g, '');
-                return new Date('2025/' + aDate) - new Date('2025/' + bDate);  // 年を仮定
-            });
+      function fillMissingDates(existingDates, dailyTotal, month) {
+    let year = 2025; // 年を固定（必要なら変更可）
 
-            for (let i = 0; i < sortedDates.length - 1; i++) {
-                let startDate = new Date('2025/' + sortedDates[i].replace(/月/g, '/').replace(/日/g, ''));
-                let endDate = new Date('2025/' + sortedDates[i + 1].replace(/月/g, '/').replace(/日/g, ''));
+    // monthが'selectedMonth'の場合は、既存の日付から月を取得
+    if (month === 'selectedMonth' && existingDates.length > 0) {
+        let firstDate = existingDates[0]; // 例: "3月3日"
+        month = parseInt(firstDate.split('月')[0]); // 月の部分だけ取得
+    }
 
-                // 開始日と終了日の日付を補完
-                while (startDate < endDate) {
-                    startDate.setDate(startDate.getDate() + 1);
-                    let formattedDate = (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日";
-                    if (!existingDates.includes(formattedDate)) {
-                        dailyTotal[formattedDate] = 0;
-                        existingDates.push(formattedDate);
-                    }
-                }
-            }
+    // その月の1日〜末日までの全日付を生成
+    let lastDay = new Date(year, month, 0).getDate(); // 月の最終日
 
-            return existingDates;
+    for (let day = 1; day <= lastDay; day++) {
+        let dateString = month + "月" + day + "日"; // ✅「3月1日」形式
+
+        // 存在しない日付のみ補間
+        if (!existingDates.includes(dateString)) {
+            dailyTotal.expense[dateString] = 0;
+            dailyTotal.income[dateString] = 0;
+            existingDates.push(dateString);
         }
+    }
+
+    // 日付順にソート
+    existingDates.sort((a, b) => {
+        let aDate = new Date(`2025/${a.replace(/月/g, '/').replace(/日/g, '')}`);
+        let bDate = new Date(`2025/${b.replace(/月/g, '/').replace(/日/g, '')}`);
+        return aDate - bDate;
+    });
+
+    return existingDates; // 補間後の日付リストを返す
+}
+
+
+
 
         // ローカルストレージから保存されたデータを取得して表示
     // 詳細情報の表示・非表示を切り替える
@@ -672,7 +683,8 @@ function fetchData(month, monthType) {
         }
     });
 
-    existingDates = fillMissingDates(existingDates, dailyTotal);
+    existingDates = fillMissingDates(existingDates, dailyTotal,'selectedMonth'); // 3月の場合
+
 
     existingDates.sort((a, b) => {
         let aDate = a.replace(/月/g, '/').replace(/日/g, '');
@@ -685,8 +697,9 @@ function fetchData(month, monthType) {
     let fixedBudget = getBudget();
     let newDailyBudgets = {};
     let cumulativeBudget = 0;
+	
     let todayDate = (today.getMonth() + 1) + "月" + today.getDate() + "日";
-
+	
     existingDates.forEach(date => {
         let spentAmount = dailyTotal.expense[date] || 0;
         let incomeAmount = dailyTotal.income[date] || 0;
@@ -697,8 +710,8 @@ function fetchData(month, monthType) {
         totalAssets += incomeAmount;
         totalAssets -= -spentAmount;
 
-        let todayClass = (date === todayDate) ? 'today-row' : '';
-
+        
+		let todayClass = (date === todayDate) ? 'today-row' : '';
         if (new Date('2025/' + date.replace(/月/g, '/').replace(/日/g, '')) > today) {
             totalAssets -= fixedBudget;
         }
