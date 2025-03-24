@@ -476,11 +476,161 @@
     border-radius: 4px;
     flex-grow: 1; /* 入力欄がラベルと横並びに収まるように調整 */
 }
+/* モーダルのスタイル */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 60%;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px gray;
+        }
 
+        .close {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+        }
 
+  /* チュートリアルのハイライト */
+        .highlight {
+            background-color: #4682B4!important;
+            transition: background-color 0.3s;
+        }
+
+        /* チュートリアルメッセージ */
+        .tutorial-box {
+            position: absolute;
+            background-color: white;
+            padding: 12px;
+            border: 2px solid #4682B4; /* 濃い青の枠 */
+            border-radius: 8px;
+            box-shadow: 3px 3px 8px gray;
+            display: none;
+            z-index: 1000;
+            max-width: 250px; /* 幅を制限 */
+        }
+/* 次へボタンを青色にする */
+#tutorialMessage button {
+    background-color: #3498db; /* 青色 */
+    color: white; /* 白文字 */
+    border: none; /* ボーダーなし */
+    padding: 10px 20px; /* パディング */
+    font-size: 16px; /* フォントサイズ */
+    border-radius: 5px; /* 角丸 */
+    cursor: pointer; /* カーソルをポインターに */
+    transition: background-color 0.3s ease; /* ホバー時のアニメーション */
+}
+
+#tutorialMessage button:hover {
+    background-color: #2980b9; /* ホバー時の色 */
+}
 
     </style>
     <script>
+	let tutorialSteps = [
+    { element: "paypayBtn", text: "ここを押して、PayPayの履歴をペーストして追加できます。（1/8）" },
+    { element: "manualBtn", text: "手動で店名や金額を入力したい場合は、ここを押してください。（2/8）" },
+    { element: "manualBtn", text: "試しに入力して、追加ボタンを押してみましょう。（3/8）" },  // 新たに追加されたステップ
+    { element: "manualBtn", text: "記録したデータは，表と表下の支出詳細，収入詳細に表示されます。（4/8）" },
+    { element: "manualBtn", text: "一度記録したら，全財産を設定してみましょう。（5/8）" },
+    { element: "yosanBtn", text: "1日の予算を設定してみましょう。（6/8）" },
+    { element: "yosanBtn", text: "表では，予算比累計で，今日までで使いすぎなのかどうかがわかります。（7/8）" },
+    { element: "yosanBtn", text: "本日以降の全財産は毎日予算額引かれた金額が表示されるため，任意の日付の全財産を予測することができます。（8/8）" }
+];
+
+let currentStep = 0;
+
+function startTutorial() {
+    currentStep = 0;
+    showTutorialStep();
+}
+
+function showTutorialStep() {
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.classList.remove('highlight');
+        btn.classList.remove('active');  // ボタンのアクティブ状態を解除
+    });
+
+    if (currentStep < tutorialSteps.length) {
+        let step = tutorialSteps[currentStep];
+        let targetElement = document.getElementById(step.element);
+
+        targetElement.classList.add('highlight');
+        targetElement.classList.add('active');  // アクティブ状態を追加
+        toggleFormBasedOnActive();
+
+        let tutorialBox = document.getElementById("tutorialMessage");
+        document.getElementById("tutorialText").innerText = step.text;
+
+        let rect = targetElement.getBoundingClientRect();
+        tutorialBox.style.top = `${rect.top + window.scrollY - 150}px`;
+        tutorialBox.style.left = `${rect.left + window.scrollX + 0}px`;
+        tutorialBox.style.display = "block";
+        
+        // 2/8ステップが終わったら、3/8ステップと同時に自動入力を実行
+        if (currentStep === 1) {
+            autoFillAndAddEntry();
+        }
+    } else {
+        document.getElementById("tutorialMessage").style.display = "none";
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.classList.remove('highlight');
+            btn.classList.remove('active');  // チュートリアル終了時にアクティブ状態を解除
+        });
+        toggleForm('paypay'); // 初期状態で PayPay フォームを表示
+    }
+}
+
+function nextTutorialStep() {
+    currentStep++;
+    showTutorialStep();
+    requestInitialAssets();
+    saveInitialAssets();
+}
+
+// **チュートリアルを開く**
+function openTutorial() {
+    document.getElementById('tutorialModal').style.display = 'block';
+}
+
+// **チュートリアルを閉じる**
+function closeTutorial() {
+    document.getElementById('tutorialModal').style.display = 'none';
+    localStorage.setItem('tutorialSeen', 'true'); // 見たことを記録
+}
+
+// 架空の購入データを自動で入力し、追加ボタンを押す関数
+function autoFillAndAddEntry() {
+    // 架空の購入データ（例：店名、日付、金額）
+    const sampleStore = 'スーパーABC';
+    const today = new Date();
+const sampleDate = today.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
+    const sampleAmount = 1500;
+
+    // 自動で入力欄に値を設定
+    document.getElementById('storeInput').value = sampleStore;
+    document.getElementById('dateInput').value = sampleDate;
+    document.getElementById('amountInput').value = sampleAmount;
+
+    // 追加ボタンをクリックする（自動で追加）
+    
+
+    // チュートリアルメッセージを消す
+    document.getElementById('manualInputTutorial').remove();
+}
+        
 		function formatAmount(value) {
     return Math.abs(value).toLocaleString(); // 絶対値を取得してカンマ区切りにする
 }
@@ -815,8 +965,8 @@ function extractInfo() {
     let newData = [];
     entries.forEach(entry => {
         // 店名を正規表現で抽出
-        let storeMatch = entry.match(/(.+?)\s*(に支払い|の.*?支)/); // 店名キャッチ
-        let dateMatch = entry.match(/(\d{1,2}月\d{1,2}日)\s*\d{1,2}時\d{1,2}分\d{1,2}秒/); // 日付抽出
+        let storeMatch = entry.match(/(.+?)\s*(に支払い|支|の.*?支|（讓渡）)/);
+		let dateMatch = entry.match(/(\d{1,2}月\d{1,2}日)\s*\d{1,2}時\d{1,2}分\d{1,2}秒/); // 日付抽出
         let amountMatch = entry.match(/(\d+,?\d*)円/);  // 金額抽出
         
         let store = storeMatch ? storeMatch[1] : "不明";  // 店名
@@ -851,6 +1001,24 @@ function extractInfo() {
     }
 }
 
+function toggleFormBasedOnActive() {
+    // すべてのフォームを非表示にする
+    document.getElementById('paypayForm').style.display = 'none';
+    document.getElementById('manualForm').style.display = 'none';
+    document.getElementById('yosanForm').style.display = 'none';
+
+    
+
+    // ボタンが active の場合に対応するフォームを表示
+    if (document.getElementById('paypayBtn').classList.contains('active')) {
+        document.getElementById('paypayForm').style.display = 'block';
+    } else if (document.getElementById('manualBtn').classList.contains('active')) {
+        document.getElementById('manualForm').style.display = 'block';
+    } else if (document.getElementById('yosanBtn').classList.contains('active')) {
+        document.getElementById('yosanForm').style.display = 'block';
+    }
+}
+
 
 window.onload = function() {
     // 初期状態で PayPay フォームを表示
@@ -859,6 +1027,7 @@ window.onload = function() {
     // 初期状態で PayPay ボタンに active クラスを付ける
     document.getElementById('paypayBtn').classList.add('active');
 };
+
 
 function toggleForm(form) {
     // すべてのフォームを非表示にする
@@ -942,18 +1111,22 @@ function toggleForm(form) {
             return `${month}月${day}日`;
         }
 
-        // 予算を設定
-        function setDailyBudget() {
-            let budget = parseInt(document.getElementById('budgetInput').value, 10);
-            if (isNaN(budget) || budget <= 0) {
-                alert("有効な予算を入力してください");
-                return;
-            }
-            setBudget(budget);  // 予算の更新
-			fetchData();
-			applyMonthFilter();
-			
-        }
+       // 予算を設定
+function setDailyBudget() {
+    let budget = parseInt(document.getElementById('budgetInput').value, 10);
+    if (isNaN(budget) || budget <= 0) {
+        alert("有効な予算を入力してください");
+        return;
+    }
+    setBudget(budget);  // 予算の更新
+    
+    // 入力欄をリセット
+    document.getElementById('budgetInput').value = '';
+    
+    fetchData();
+    applyMonthFilter();
+}
+
 
        // 正しいデータを更新する関数
 function updateEntry(index, newAmount, newDate, newDescription) {
@@ -1025,9 +1198,32 @@ function updateEntry(index, newAmount, newDate, newDescription) {
 
 <!-- 説明エリア（初期状態は非表示） -->
 <div id="descriptionSection" style="display: block;">
-    <p>Luck家計簿は、PayPayから5タップで店名，日付，金額を記録できます。</p>
-<p>30秒で終わる導入方法は <a href="https://note.com/chokin_taisetsu/n/nd26dab76ea5c?sub_rt=share_pb" target="_blank">こちら</a></p>
+	<p>Luck家計簿は、このようにPayPayの決済画面から<strong>5タップで店名，日付，金額を記録できる</strong>簡単な家計簿です。</p>
+<img src="file:///C:/Users/kadota/Desktop/%E5%AE%B6%E8%A8%88%E7%B0%BFhtml/kiroku.gif" alt="説明用GIF" width="300" />
+	
+<p> <a href="https://www.icloud.com/shortcuts/8f0e0a3b4a074877b33f87ffa7169c04" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，</p>
+<p>PayPayを開き，以下のようにショートカットのボタンを共有シートの一番上に持ってこれば導入完了です．</p>
+<img src="file:///C:/Users/kadota/Desktop/家計簿html/dounyuu.gif" alt="Dounyuu GIF" />
+<p>ホーム画面に家計簿を追加したい場合は <a href="ttps://www.icloud.com/shortcuts/f457ce47dc424a27b298c5876815f7ea" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，共有→ホーム画面に追加</p>
+
+
+  <!-- チュートリアル開始ボタン -->
+    <button onclick="startTutorial()">チュートリアル開始</button>
+	
 </div>
+    <div class="button-group">
+        <button id="paypayBtn" class="toggle-btn" onclick="toggleForm('paypay')">PayPayから追加</button>
+        <button id="manualBtn" class="toggle-btn" onclick="toggleForm('manual')">手入力フォーム</button>
+        <button id="yosanBtn" class="toggle-btn" onclick="toggleForm('yosan')">予算を設定</button>
+    </div>
+
+    <div id="tutorialMessage" class="tutorial-box">
+    <p id="tutorialText"></p>
+    <button onclick="nextTutorialStep()">次へ</button>
+</div>
+
+	
+
 
 <script>
 // ページ読み込み時に前回の状態をチェック
@@ -1091,12 +1287,7 @@ function toggleDescription() {
 };
 
 	</script>
-    <!-- 切り替えボタン -->
-        <div class="button-group">
-    <button id="paypayBtn" class="toggle-btn" onclick="toggleForm('paypay')">PayPayから追加</button>
-<button id="manualBtn" class="toggle-btn" onclick="toggleForm('manual')">手入力フォーム</button>
-<button id="yosanBtn" class="toggle-btn" onclick="toggleForm('yosan')">予算を設定</button>
-</div>
+    
     <div>
 	<!-- PayPayフォーム -->
         <div class="card" id="paypayForm" >
@@ -1147,9 +1338,10 @@ function toggleDescription() {
     
     <!-- 全財産額入力 -->
     <div id="initialAssetsSection" class="initial-assets-section" style="display:none;">
-        <label for="initialAssetsInput">最初の全財産額を入力してください:</label>
+        <label for="initialAssetsInput">最初の全財産額を入力してください:変更したい場合は差額を支出，収入で記入してください．</label>
         <input type="number" id="initialAssetsInput" placeholder="全財産額を入力">
-        <button onclick="saveInitialAssets()">保存</button>
+        <button onclick="saveInitialAssets()" style="background-color: #4682B4; color: white;">保存</button>
+
     </div>
 	
 	
