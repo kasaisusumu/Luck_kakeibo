@@ -549,8 +549,8 @@
     { element: "manualBtn", text: "PayPayから追加する場合は、「PayPayから追加」を押します。（2/8）" },
     { element: "manualBtn", text: "このように入力したら、「追加」を押してみましょう。（3/8）" },  // 新たに追加されたステップ
     { element: "yosanBtn", text: "1日あたりの予算を設定してみましょう。（4/8）" },
-    { element: "yosanBtn", text: "初めて記録したら，全財産を設定してみましょう。（再設定する場合は収入，支出として調整してください）（5/8）" },
-    { element: "yosanBtn", text: "データは，表と表下の支出詳細，収入詳細に表示されます。（6/8）" },
+    { element: "yosanBtn", text: "初めて記録したら，全財産を設定してみましょう。（5/8）" },
+    { element: "yosanBtn", text: "データは，表と表下の支出詳細，収入詳細に表示されます。それぞれスクロールできます。（6/8）" },
     { element: "yosanBtn", text: "「予算比累計」で，今日までで使いすぎなのかどうかがわかります。（7/8）" },
     { element: "yosanBtn", text: "本日以降の全財産は，毎日予算額引かれた金額が表示されるため，任意の日付の全財産を予測することができます。（8/8）" }
 ];
@@ -583,17 +583,27 @@ function showTutorialStep() {
         tutorialBox.style.display = "block";
 
         // 2/8ステップが終わったら、3/8ステップと同時に自動入力を実行
-        if (currentStep === 1) {
+        if (currentStep === 2) {
             autoFillAndAddEntry();
 			
         }
+		else if (currentStep === 3) {
+    document.getElementById('budgetInput').value = 1000; // 予算記入欄に1000を自動入力
+    scrollToElement("budgetInput");
+}
+
+		if (currentStep === 4) {
+    requestInitialAssets();
+    document.getElementById('initialAssetsInput').value = 50000; // 予算記入欄に1000を自動入力
+    scrollToElement("initialAssetsInput");
+}
 
         // 各ステップにおけるスクロール処理
         if (currentStep === 0 || currentStep === 1 || currentStep === 2 || currentStep === 3) {
             scrollToElement("manualBtn");
         } else if (currentStep === 4) {
 			requestInitialAssets();
-            scrollToElement("initialAssetsInput");
+            scrollToElement("initialAssetsSection");
 			
         } else if (currentStep === 5 || currentStep === 6 || currentStep === 7) {
             scrollToElement("budgetDisplay");
@@ -605,6 +615,8 @@ function showTutorialStep() {
             btn.classList.remove('active');
         });
         toggleForm('manual'); // 初期状態に戻す
+		// チュートリアル終了後に「導入方法」セクションまでスクロール
+    scrollToElement("tutorial");
     }
 }
 
@@ -994,7 +1006,7 @@ function extractInfo() {
     let newData = [];
     entries.forEach(entry => {
         // 店名を正規表現で抽出
-        let storeMatch = entry.match(/(.+?)\s*(に支払い|支|の.*?支|（讓渡）)/);
+        let storeMatch = entry.match(/(.+?)\s*(に支払い|支|の.*?支||から受け取り|（讓渡）)/);
         let dateMatch = entry.match(/(\d{1,2})月(\d{1,2})日/); // 日付抽出（MM/DD形式）
         let amountMatch = entry.match(/(\d+,?\d*)円/);  // 金額抽出
         
@@ -1083,7 +1095,7 @@ function toggleForm(form) {
         }
 
         function updateInputLabels() {
-            let expenseIncomeText = isExpense ? "支出" : "収入";
+            let expenseIncomeText = isExpense ? "支出:" : "収入:";
             let buttonText = isExpense ? "支出の記入" : "収入の記入";
             document.getElementById('inputButton').innerText = buttonText;
             document.getElementById('inputLabel').innerText = expenseIncomeText ;
@@ -1187,10 +1199,7 @@ function updateEntry(index, newAmount, newDate, newDescription) {
 
 
 
-
-
-
-        // 全財産額の入力フォームを表示
+ // 全財産額の入力フォームを表示
         function requestInitialAssets() {
             let assetsSection = document.getElementById('initialAssetsSection');
             assetsSection.style.display = 'block';
@@ -1202,11 +1211,15 @@ function updateEntry(index, newAmount, newDate, newDescription) {
                 localStorage.setItem('totalAssets', JSON.stringify(parseInt(initialAssets, 10)));
                 fetchData();
 			applyMonthFilter();
-                document.getElementById('initialAssetsSection').style.display = 'none'; // 非表示
+			 document.getElementById('initialAssetsInput').value = '';
+                
             } else {
                 alert("全財産額を正しく入力してください");
             }
         }
+
+
+        
 
         window.onload = fetchData;
     </script>
@@ -1220,9 +1233,9 @@ function updateEntry(index, newAmount, newDate, newDescription) {
 <img src="file:///C:/Users/kadota/Desktop/%E5%AE%B6%E8%A8%88%E7%B0%BFhtml/kiroku.gif" alt="説明用GIF" width="300" />
 	
 <!-- チュートリアル開始ボタン -->
-    <button onclick="startTutorial()">チュートリアルを見る</button>
+    <button id="tutorial"onclick="startTutorial()">チュートリアルを見る</button>
 	
-<p>【導入方法】</p>
+<p><strong>【導入方法】</strong></p>
 <p> <a href="https://www.icloud.com/shortcuts/8f0e0a3b4a074877b33f87ffa7169c04" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，</p>
 <p>PayPayを開き，以下のようにショートカットのボタンを共有シートの一番上に持ってこれば導入完了です．</p>
 <img src="file:///C:/Users/kadota/Desktop/家計簿html/dounyuu.gif" alt="Dounyuu GIF" />
@@ -1234,8 +1247,8 @@ function updateEntry(index, newAmount, newDate, newDescription) {
 </div>
     <div class="button-group">
         <button id="paypayBtn" class="toggle-btn" onclick="toggleForm('paypay')"style="display:none;">PayPayから追加</button>
-        <button id="manualBtn" class="toggle-btn" onclick="toggleForm('manual')">手入力フォーム</button>
-        <button id="yosanBtn" class="toggle-btn" onclick="toggleForm('yosan')">予算を設定</button>
+        <button id="manualBtn" class="toggle-btn" onclick="toggleForm('manual')">入力フォーム</button>
+        <button id="yosanBtn" class="toggle-btn" onclick="toggleForm('yosan')">予算，全財産を設定</button>
     </div>
 
     <div id="tutorialMessage" class="tutorial-box">
@@ -1305,6 +1318,8 @@ function toggleDescription() {
     fetchData(selectMonth, 'currentMonth');
 	
 	
+	
+	
 
     
 };
@@ -1358,16 +1373,20 @@ function toggleDescription() {
         <input type="number" id="budgetInput" placeholder="予算を入力">
         <button onclick="setDailyBudget()">予算を設定</button>
     </div>
+	<!-- 全財産額入力 -->
+    <div id="initialAssetsSection" class="initial-assets-section" >
+        <h2>全財産額を設定</h2>
+		 <label for="initialAssetsInput">今月の初日時点の金額が設定できます．</label>
+        <label for="initialAssetsInput">本日の実際の全財産額と表の金額が合わない場合は，収入，支出の記入により調整してください。</label>
+        
+		<input type="number" id="initialAssetsInput" placeholder="全財産額を記入">
+        <button onclick="saveInitialAssets()" >全財産を設定</button>
+
+    </div>
 	</div>
 	
     
-    <!-- 全財産額入力 -->
-    <div id="initialAssetsSection" class="initial-assets-section" style="display:none;">
-        <label for="initialAssetsInput">最初の全財産額を入力してください:変更したい場合は差額を支出，収入で記入してください．</label>
-        <input type="number" id="initialAssetsInput" placeholder="全財産額を入力">
-        <button onclick="saveInitialAssets()" style="background-color: #4682B4; color: white;">保存</button>
-
-    </div>
+    
 	
 	
    <!-- 月選択欄 -->
