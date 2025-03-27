@@ -1006,8 +1006,8 @@ function extractInfo() {
     let newData = [];
     entries.forEach(entry => {
         // 店名を正規表現で抽出
-        let storeMatch = entry.match(/(.+?)\s*(に支払い|支|の.*?支||から受け取り|（讓渡）)/);
-        let dateMatch = entry.match(/(\d{1,2})月(\d{1,2})日/); // 日付抽出（MM/DD形式）
+         let storeMatch = entry.match(/(.+?)\s*(に支払い|支|の.*?支|（讓渡）)/);
+		let dateMatch = entry.match(/(\d{1,2})月(\d{1,2})日/); // 日付抽出（MM/DD形式）
         let amountMatch = entry.match(/(\d+,?\d*)円/);  // 金額抽出
         
         let store = storeMatch ? storeMatch[1] : "不明";  // 店名
