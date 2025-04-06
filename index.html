@@ -185,6 +185,7 @@
     .input-group input,
     .textInput,
     #budgetInput,
+	#todayAssetsInput,
     #storeInput,
     #dateInput,
     #amountInput,
@@ -593,9 +594,9 @@ function showTutorialStep() {
 }
 
 		if (currentStep === 4) {
-    requestInitialAssets();
-    document.getElementById('initialAssetsInput').value = 50000; // 予算記入欄に1000を自動入力
-    scrollToElement("initialAssetsInput");
+    
+    document.getElementById('todayAssetsInput').value = 50000; // 予算記入欄に1000を自動入力
+    scrollToElement("setTodayAssets");
 }
 
         // 各ステップにおけるスクロール処理
@@ -684,10 +685,7 @@ function scrollToElement(elementId) {
 			applyMonthFilter();
         }
 
-        // 初期全財産を取得
-        function getTotalAssets() {
-            return JSON.parse(localStorage.getItem('totalAssets')) || 0;
-        }
+        
 
         // 日付ごとの予算データを取得
         function getDailyBudgets() {
@@ -816,12 +814,69 @@ function applyMonthFilter() {
     }
 }
 
+function setTodayAssets() {
+    const input = document.getElementById('todayAssetsInput');
+    const inputValue = parseInt(input.value, 10);
+    if (isNaN(inputValue)) {
+        alert("数値を入力してください。");
+        return;
+    }
+
+    // 今日の日付を "MM月DD日" 形式で取得
+    const today = new Date();
+    const todayStr = (today.getMonth() + 1) + "月" + today.getDate() + "日";
+
+    // 表示中の全財産額を取得（summaryテーブルの最終列の今日の行）
+    const summaryRows = document.querySelectorAll('#summary tr');
+    let currentAssets = null;
+
+    summaryRows.forEach(row => {
+        if (row.classList.contains("today-row")) {
+            const assetCell = row.cells[4]; // 5列目が「全財産の推移」
+            if (assetCell) {
+                const text = assetCell.textContent.replace(/[¥,]/g, "");
+                currentAssets = parseInt(text, 10);
+            }
+        }
+    });
+
+    if (currentAssets === null) {
+        alert("今日の全財産が見つかりません。");
+        return;
+    }
+
+    const diff = inputValue - currentAssets;
+    if (diff === 0) {
+        alert("現在の全財産と同じです。変更はありません。");
+        return;
+    }
+
+    // 調整記録を paymentData に追加
+    let paymentData = JSON.parse(localStorage.getItem("paymentData")) || [];
+
+    const adjustment = {
+        store: "全財産調整",
+        date: todayStr,
+        amount: diff,
+    };
+
+    paymentData.push(adjustment);
+    localStorage.setItem("paymentData", JSON.stringify(paymentData));
+
+    alert(`¥${Math.abs(diff)} を ${diff > 0 ? "収入" : "支出"}として記録しました。`);
+
+    // 再描画
+    fetchData((today.getFullYear()) + '-' + (today.getMonth() + 1).toString().padStart(2, '0'), 'currentMonth');
+
+    // 入力リセット
+    input.value = '';
+}
 
 // 月ごとにデータをフィルタリングして表示
 function fetchData(month, monthType) {
     let data = JSON.parse(localStorage.getItem('paymentData')) || [];
 
-    // まず削除ボタンを表示
+    // 削除ボタンを追加
     let dataWithDeleteButtons = data.map((entry, index) => {
         return {
             ...entry,
@@ -829,58 +884,94 @@ function fetchData(month, monthType) {
         };
     });
 
-    // 月ごと、支出か収入かでデータを振り分ける
     let expenses = dataWithDeleteButtons.filter(entry => entry.amount < 0);
     let incomes = dataWithDeleteButtons.filter(entry => entry.amount > 0);
 
     let dailyTotal = { expense: {}, income: {} };
-    let existingDates = [];
-    let dailyBudgets = getDailyBudgets();
-    let totalAssets = getTotalAssets(); // 初期全財産
+    let allDailyTotal = { expense: {}, income: {} };
+    let allDates = [];
 
-    // 今日の日付を取得
+    // 今日の日付と現在の月を取得
     let today = new Date();
-    let currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0');  // 例: 2025-03
+    let currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0');
 
-    // データを月ごとにフィルタリング
-    dataWithDeleteButtons.forEach((entry) => {
-        let store = entry.store || "不明";
+    // すべての日付を集計し、支出と収入を日単位で保持
+    dataWithDeleteButtons.forEach(entry => {
+        let date = entry.date;
+        let amount = entry.amount || 0;
+
+        if (!date || amount === 0) return;
+
+        if (!allDailyTotal.expense[date]) {
+            allDailyTotal.expense[date] = 0;
+            allDailyTotal.income[date] = 0;
+        }
+
+        if (amount < 0) {
+            allDailyTotal.expense[date] += amount;
+        } else {
+            allDailyTotal.income[date] += amount;
+        }
+
+        if (!allDates.includes(date)) {
+            allDates.push(date);
+        }
+    });
+
+    allDates.sort((a, b) => {
+        let aDate = new Date('2025/' + a.replace(/月/g, '/').replace(/日/g, ''));
+        let bDate = new Date('2025/' + b.replace(/月/g, '/').replace(/日/g, ''));
+        return aDate - bDate;
+    });
+
+    let selectedMonthStart = new Date(month + '/01');
+    let totalAssets = 0;
+
+    // 前月末までの全財産を計算
+    allDates.forEach(date => {
+        let currentDate = new Date('2025/' + date.replace(/月/g, '/').replace(/日/g, ''));
+        if (currentDate < selectedMonthStart) {
+            totalAssets += allDailyTotal.income[date] || 0;
+            totalAssets -= -(allDailyTotal.expense[date] || 0);
+        }
+    });
+
+    // 今月のデータをフィルタリングし、dailyTotal に格納
+    let existingDates = [];
+    dataWithDeleteButtons.forEach(entry => {
         let date = entry.date || "不明";
         let amount = entry.amount || 0;
 
-        // 月が一致するデータだけを選択
-        if (date !== "不明" && amount !== 0) {
-            let entryMonth = date.split("月")[0].padStart(2, '0');  // 月を2桁で抽出
+        if (date === "不明" || amount === 0) return;
 
-            // selectedMonth が currentMonth と一致する場合
-            if ((monthType === 'currentMonth' && currentMonth === '2025-' + entryMonth) ||
-                (monthType === 'selectedMonth' && month === '2025-' + entryMonth)) {
+        let entryMonth = date.split("月")[0].padStart(2, '0');
 
-                if (!dailyTotal.expense[date]) {
-                    dailyTotal.expense[date] = 0;
-                    dailyTotal.income[date] = 0;
-                }
+        if ((monthType === 'currentMonth' && currentMonth === '2025-' + entryMonth) ||
+            (monthType === 'selectedMonth' && month === '2025-' + entryMonth)) {
 
-                if (amount < 0) {
-                    dailyTotal.expense[date] += amount;
-                } else {
-                    dailyTotal.income[date] += amount;
-                }
+            if (!dailyTotal.expense[date]) {
+                dailyTotal.expense[date] = 0;
+                dailyTotal.income[date] = 0;
+            }
 
-                if (!existingDates.includes(date)) {
-                    existingDates.push(date);
-                }
+            if (amount < 0) {
+                dailyTotal.expense[date] += amount;
+            } else {
+                dailyTotal.income[date] += amount;
+            }
+
+            if (!existingDates.includes(date)) {
+                existingDates.push(date);
             }
         }
     });
 
-    existingDates = fillMissingDates(existingDates, dailyTotal,'selectedMonth'); // 3月の場合
-
+    existingDates = fillMissingDates(existingDates, dailyTotal, 'selectedMonth');
 
     existingDates.sort((a, b) => {
-        let aDate = a.replace(/月/g, '/').replace(/日/g, '');
-        let bDate = b.replace(/月/g, '/').replace(/日/g, '');
-        return new Date('2025/' + aDate) - new Date('2025/' + bDate);
+        let aDate = new Date('2025/' + a.replace(/月/g, '/').replace(/日/g, ''));
+        let bDate = new Date('2025/' + b.replace(/月/g, '/').replace(/日/g, ''));
+        return aDate - bDate;
     });
 
     let summary = "<table><tr><th>日付</th><th>支出合計</th><th>収入合計</th><th>予算比累計</th><th>全財産の推移</th></tr>";
@@ -888,9 +979,13 @@ function fetchData(month, monthType) {
     let fixedBudget = getBudget();
     let newDailyBudgets = {};
     let cumulativeBudget = 0;
-	
     let todayDate = (today.getMonth() + 1) + "月" + today.getDate() + "日";
-	
+
+    let totalSpent = 0;
+    let totalIncome = 0;
+    let totalCumulativeBudget = 0;
+    let totalAssetsAmount = 0;
+
     existingDates.forEach(date => {
         let spentAmount = dailyTotal.expense[date] || 0;
         let incomeAmount = dailyTotal.income[date] || 0;
@@ -901,56 +996,66 @@ function fetchData(month, monthType) {
         totalAssets += incomeAmount;
         totalAssets -= -spentAmount;
 
-        
-		let todayClass = (date === todayDate) ? 'today-row' : '';
+        totalSpent += Math.abs(spentAmount);
+        totalIncome += incomeAmount;
+        totalCumulativeBudget += cumulativeBudget;
+        totalAssetsAmount = totalAssets;
+
+        let todayClass = (date === todayDate) ? 'today-row' : '';
         if (new Date('2025/' + date.replace(/月/g, '/').replace(/日/g, '')) > today) {
             totalAssets -= fixedBudget;
         }
 
-        // 予算比累計と全財産がマイナスの時に赤色表示
         let budgetClass = cumulativeBudget < 0 ? 'negative' : '';
         let assetsClass = totalAssets < 0 ? 'negative' : '';
 
-        // 表示用の「月/日」形式に変更
         let displayDate = date.replace(/月/g, '/').replace(/日/g, '');
-
         spentAmount *= -1;
 
-        summary += `<tr class="${todayClass}">
-                    <td>${displayDate}</td>
-                    <td>¥${formatAmount(Math.abs(spentAmount))}</td>
-                    <td>¥${formatAmount(incomeAmount)}</td>
-                    <td class="${budgetClass}">¥${formatAmount(cumulativeBudget)}</td>
-                    <td class="${assetsClass}">¥${formatAmount(totalAssets)}</td>
-                </tr>`;
+        summary += `<tr class="${todayClass}" onclick="showDetails('${date}')">
+                        <td>${displayDate}</td>
+                        <td>¥${formatAmount(Math.abs(spentAmount))}</td>
+                        <td>¥${formatAmount(incomeAmount)}</td>
+                        <td class="${budgetClass}">¥${formatAmount(cumulativeBudget)}</td>
+                        <td class="${assetsClass}">¥${formatAmount(totalAssets)}</td>
+                    </tr>`;
 
-        // 再度符号を反転（元に戻す）
         spentAmount *= -1;
-        dailyBudgets[date] = cumulativeBudget;
     });
+
+    // 合計行を追加
+    summary += `<tr>
+                    <td>合計</td>
+                    <td>¥${formatAmount(totalSpent)}</td>
+                    <td>¥${formatAmount(totalIncome)}</td>
+                    <td>¥-</td>
+<td>¥-</td>
+
+
+           
+                </tr>`;
 
     summary += "</table>";
     document.getElementById('summary').innerHTML = summary;
 
-    // **支出リストの作成 (日付でフィルタリング)**
-    let expenseDetailsContent = expenses.filter((result) => existingDates.includes(result.date))
+    // 支出・収入詳細の表示
+    let expenseDetailsContent = expenses.filter(result => existingDates.includes(result.date))
         .map((result, index) =>
             `<div>
                 <p>店名: ${result.store === "不明" ? `<button onclick="requestCorrection('store', ${index}, true)">不明</button>` : result.store}</p>
                 <p>日付: ${result.date === "不明" ? `<button onclick="requestCorrection('date', ${index}, true)">不明</button>` : result.date}</p>
                 <p>金額: ${result.amount === 0 ? `<button onclick="requestCorrection('amount', ${index}, true)">不明</button>` : '¥' + formatAmount(Math.abs(result.amount))}</p>
-                ${result.deleteButton}  <!-- 削除ボタン -->
+                ${result.deleteButton}
                 <br><br>
             </div>`).join("");
 
-    // **収入リストの作成 (日付でフィルタリング)**
-    let incomeDetailsContent = incomes.filter((result) => existingDates.includes(result.date))
+    let incomeDetailsContent = incomes.filter(result => existingDates.includes(result.date))
         .map((result, index) =>
             `<div>
                 <p>店名: ${result.store === "不明" ? `<button onclick="requestCorrection('store', ${index}, false)">不明</button>` : result.store}</p>
                 <p>日付: ${result.date === "不明" ? `<button onclick="requestCorrection('date', ${index}, false)">不明</button>` : result.date}</p>
                 <p>金額: ${result.amount === 0 ? `<button onclick="requestCorrection('amount', ${index}, false)">不明</button>` : '¥' + formatAmount(Math.abs(result.amount))}</p>
-                ${result.deleteButton}  <!-- 削除ボタン -->
+                ${result.deleteButton}
                 <br><br>
             </div>`).join("");
 
@@ -960,9 +1065,34 @@ function fetchData(month, monthType) {
     document.getElementById('budgetDisplay').innerHTML = `現在の予算: ¥${formatAmount(fixedBudget)}`;
     document.getElementById('totalAssetsDisplay').innerHTML = `最終日の全財産: ¥${formatAmount(totalAssets)}`;
 
-scrollToBottom() 
+    scrollToBottom();
 }
 
+
+// 日付クリック時の詳細表示
+function showDetails(date) {
+    let expenses = JSON.parse(localStorage.getItem('paymentData')) || [];
+    let expenseDetails = expenses.filter(entry => entry.date === date && entry.amount < 0)
+        .map(entry => `
+		<div>
+            <p>店名: ${entry.store}</p>
+            <p>日付: ${entry.date}</p>
+            <p>金額: ¥${formatAmount(Math.abs(entry.amount))}</p>
+			<br><br>
+       </div> `).join("");
+    
+    let incomeDetails = expenses.filter(entry => entry.date === date && entry.amount > 0)
+        .map(entry => `
+		<div>
+            <p>店名: ${entry.store}</p>
+            <p>日付: ${entry.date}</p>
+            <p>金額: ¥${formatAmount(entry.amount)}</p>
+			<br><br>
+        </div>`).join("");
+
+    document.getElementById('expenseDetails').innerHTML = expenseDetails;
+    document.getElementById('incomeDetails').innerHTML = incomeDetails;
+}
 
 
 
@@ -1199,26 +1329,7 @@ function updateEntry(index, newAmount, newDate, newDescription) {
 
 
 
- // 全財産額の入力フォームを表示
-        function requestInitialAssets() {
-            let assetsSection = document.getElementById('initialAssetsSection');
-            assetsSection.style.display = 'block';
-        }
-
-        function saveInitialAssets() {
-            let initialAssets = document.getElementById('initialAssetsInput').value.trim();
-            if (initialAssets && !isNaN(initialAssets)) {
-                localStorage.setItem('totalAssets', JSON.stringify(parseInt(initialAssets, 10)));
-                fetchData();
-			applyMonthFilter();
-			 document.getElementById('initialAssetsInput').value = '';
-                
-            } else {
-                alert("全財産額を正しく入力してください");
-            }
-        }
-
-
+ 
         
 
         window.onload = fetchData;
@@ -1232,16 +1343,16 @@ function updateEntry(index, newAmount, newDate, newDescription) {
 	<p>ラック家計簿は、このようにPayPayの決済画面から<strong>5タップで店名，日付，金額を記録できる</strong>簡単な家計簿です。</p>
 	<p style="display:none;">PayPay 連携 簡単 自動 PayPay家計簿 最新 人気 安心 連携 連携 連携</p>
 
-<img src="kiroku2.gif" alt="説明用GIF" width="300" />
+<img src="file:///C:/Users/kadota/Desktop/%E5%AE%B6%E8%A8%88%E7%B0%BFhtml/kiroku.gif" alt="説明用GIF" width="300" />
 	
 <!-- チュートリアル開始ボタン -->
     <button id="tutorial"onclick="startTutorial()">チュートリアルを見る</button>
 	
 <p><strong>【導入方法】</strong></p>
-<p> <a href="https://www.icloud.com/shortcuts/9b4e4bbf28b440448509affffb322ecf" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，</p>
+<p> <a href="https://www.icloud.com/shortcuts/8f0e0a3b4a074877b33f87ffa7169c04" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，</p>
 <p>PayPayを開き，以下のようにショートカットのボタンを共有シートの一番上に持ってこれば導入完了です．</p>
-<img src="dounyuu.gif" alt="Dounyuu GIF" />
-<p>ホーム画面に家計簿を追加したい場合は <a href="https://www.icloud.com/shortcuts/f0484ba04e784c7eb6a901411c880d90" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，共有→ホーム画面に追加</p>
+<img src="file:///C:/Users/kadota/Desktop/家計簿html/dounyuu.gif" alt="Dounyuu GIF" />
+<p>ホーム画面に家計簿を追加したい場合は <a href="ttps://www.icloud.com/shortcuts/f457ce47dc424a27b298c5876815f7ea" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，共有→ホーム画面に追加</p>
 
 
   
@@ -1376,15 +1487,12 @@ function toggleDescription() {
         <button onclick="setDailyBudget()">予算を設定</button>
     </div>
 	<!-- 全財産額入力 -->
-    <div id="initialAssetsSection" class="initial-assets-section" >
-        <h2>全財産額を設定</h2>
-		 <label for="initialAssetsInput">今月の初日時点の金額が設定できます．</label>
-        <label for="initialAssetsInput">本日の実際の全財産額と表の金額が合わない場合は，収入，支出の記入により調整してください。</label>
-        
-		<input type="number" id="initialAssetsInput" placeholder="全財産額を記入">
-        <button onclick="saveInitialAssets()" >全財産を設定</button>
+    <div>
+	<h2>全財産を修正</h2>
+  <input type="number" id="todayAssetsInput" placeholder="今日の全財産を設定" />
+  <button onclick="setTodayAssets()">反映</button>
+</div>
 
-    </div>
 	</div>
 	
     
