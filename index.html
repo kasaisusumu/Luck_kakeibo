@@ -949,10 +949,13 @@ function fetchData(month, monthType) {
         if ((monthType === 'currentMonth' && currentMonth === '2025-' + entryMonth) ||
             (monthType === 'selectedMonth' && month === '2025-' + entryMonth)) {
 
-            if (!dailyTotal.expense[date]) {
-                dailyTotal.expense[date] = 0;
-                dailyTotal.income[date] = 0;
-            }
+           if (!(date in dailyTotal.expense)) {
+    dailyTotal.expense[date] = 0;
+}
+if (!(date in dailyTotal.income)) {
+    dailyTotal.income[date] = 0;
+}
+
 
             if (amount < 0) {
                 dailyTotal.expense[date] += amount;
@@ -990,6 +993,12 @@ function fetchData(month, monthType) {
         let spentAmount = dailyTotal.expense[date] || 0;
         let incomeAmount = dailyTotal.income[date] || 0;
 
+        // 予算比に含めるエントリが存在する場合に処理を追加
+        dataWithDeleteButtons.forEach(entry => {
+            if (entry.date === date && entry.includeInBudget) {
+                cumulativeBudget -= entry.amount;  // 予算比に含める
+            }
+        });
         cumulativeBudget += fixedBudget + spentAmount + incomeAmount;
         newDailyBudgets[date] = cumulativeBudget;
 
@@ -1029,10 +1038,7 @@ function fetchData(month, monthType) {
                     <td>¥${formatAmount(totalSpent)}</td>
                     <td>¥${formatAmount(totalIncome)}</td>
                     <td>¥-</td>
-<td>¥-</td>
-
-
-           
+                    <td>¥-</td>
                 </tr>`;
 
     summary += "</table>";
@@ -1065,8 +1071,13 @@ function fetchData(month, monthType) {
     document.getElementById('budgetDisplay').innerHTML = `現在の予算: ¥${formatAmount(fixedBudget)}`;
     document.getElementById('totalAssetsDisplay').innerHTML = `最終日の全財産: ¥${formatAmount(totalAssets)}`;
 
+    scrollToToday();
     scrollToBottom();
 }
+
+
+
+
 
 
 // 日付クリック時の詳細表示
@@ -1092,7 +1103,26 @@ function showDetails(date) {
 
     document.getElementById('expenseDetails').innerHTML = expenseDetails;
     document.getElementById('incomeDetails').innerHTML = incomeDetails;
+	
+
 }
+function scrollToToday() {
+    const todayRow = document.querySelector('.today-row');
+    const container = document.querySelector('.scrollable-table');  // 変更
+
+    if (todayRow && container) {
+        const rowTop = todayRow.offsetTop;
+        const rowHeight = todayRow.offsetHeight;
+        const containerHeight = container.clientHeight;
+
+        // 今日の行を中央に表示するためにスクロール
+        container.scrollTop = rowTop - (containerHeight / 2) + (rowHeight / 2);
+    }
+}
+
+
+
+
 
 
 
@@ -1227,42 +1257,49 @@ function toggleForm(form) {
         function updateInputLabels() {
             let expenseIncomeText = isExpense ? "支出:" : "収入:";
             let buttonText = isExpense ? "支出の記入" : "収入の記入";
-            document.getElementById('inputButton').innerText = buttonText;
+            document.getElementById('inputButtonWithoutBudget').innerText = buttonText;
             document.getElementById('inputLabel').innerText = expenseIncomeText ;
         }
 
         // 入力した情報をローカルストレージに保存
-        function addManualEntry() {
-            let store = document.getElementById('storeInput').value.trim();
-            let date = document.getElementById('dateInput').value.trim();
-            let amount = parseInt(document.getElementById('amountInput').value.trim(), 10);
+        function addManualEntry(includeInBudget) {
+    let store = document.getElementById('storeInput').value.trim();
+    let date = document.getElementById('dateInput').value.trim();
+    let amount = parseInt(document.getElementById('amountInput').value.trim(), 10);
 
-            if (store && date && !isNaN(amount)) {
-                // 入力日付を「月/日」の形式に変換
-                let formattedDate = formatDate(date);
+    if (store && date && !isNaN(amount)) {
+        // 入力日付を「月/日」の形式に変換
+        let formattedDate = formatDate(date);
 
-                // 支出か収入かを判断して入力を保存
-                let newEntry = { store, date: formattedDate, amount: isExpense ? -amount : amount };
-                let currentData = JSON.parse(localStorage.getItem('paymentData')) || [];
-                currentData.push(newEntry);
-                localStorage.setItem('paymentData', JSON.stringify(currentData));
+        // 支出か収入かを判断して入力を保存
+        let newEntry = {
+            store,
+            date: formattedDate,
+            amount: isExpense ? -amount : amount,
+            includeInBudget // ボタンに応じてincludeInBudgetを設定
+        };
 
-                fetchData();
-				applyMonthFilter();
+        let currentData = JSON.parse(localStorage.getItem('paymentData')) || [];
+        currentData.push(newEntry);
+        localStorage.setItem('paymentData', JSON.stringify(currentData));
 
-                // 入力フィールドをクリア
-                document.getElementById('storeInput').value = '';
-                document.getElementById('dateInput').value = '';
-                document.getElementById('amountInput').value = '';
-				
-				// 最初のエントリが追加された場合、全財産額を入力するフォームを表示
-				if (currentData.length === 1) {
-					requestInitialAssets();
-				}
-            } else {
-                alert('すべてのフィールドに有効な情報を入力してください');
-            }
+        fetchData();
+        applyMonthFilter();
+
+        // 入力フィールドをクリア
+        document.getElementById('storeInput').value = '';
+        document.getElementById('dateInput').value = '';
+        document.getElementById('amountInput').value = '';
+
+        // 最初のエントリが追加された場合、全財産額を入力するフォームを表示
+        if (currentData.length === 1) {
+            requestInitialAssets();
         }
+    } else {
+        alert('すべてのフィールドに有効な情報を入力してください');
+    }
+}
+
 
         function formatDate(date) {
             let parts = date.split('/');
@@ -1354,6 +1391,7 @@ function updateEntry(index, newAmount, newDate, newDescription) {
  <img src="dounyuu.gif" alt="Dounyuu GIF" />
  <p>ホーム画面に家計簿を追加したい場合は <a href="https://www.icloud.com/shortcuts/f0484ba04e784c7eb6a901411c880d90" target="_blank">こちら</a>のiPhoneショートカットをダウンロード後，共有→ホーム画面に追加</p>
  
+
 
   
 	
@@ -1476,8 +1514,9 @@ function toggleDescription() {
     </div>
 </div>
 </div>
-		<button id="inputButton" onclick="addManualEntry()">追加</button>
-    </div>
+		<button id="inputButton" onclick="addManualEntry(true)">予算比に含めずに追加</button>
+<button id="inputButtonWithoutBudget" onclick="addManualEntry(false)">追加</button>
+ </div>
 	
 	<!-- 予算フォーム -->
         <div class="card" id="yosanForm" style="display:none;">
@@ -1487,13 +1526,14 @@ function toggleDescription() {
         <button onclick="setDailyBudget()">予算を設定</button>
     </div>
 	<!-- 全財産額入力 -->
-    <div>
-	<h2>全財産を修正</h2>
-  <input type="number" id="todayAssetsInput" placeholder="今日の全財産を設定" />
-  <button onclick="setTodayAssets()">反映</button>
+     <div>
+	<h2>全財産を設定</h2>
+  <input type="number" id="todayAssetsInput" placeholder="全財産を入力" />
+  <button onclick="setTodayAssets()">全財産を設定</button>
 </div>
 
 	</div>
+	
 	
     
     
