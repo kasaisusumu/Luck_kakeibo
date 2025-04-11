@@ -966,15 +966,27 @@ function fetchData(month, monthType) {
 
     let selectedMonthStart = new Date(month + '/01');
     let totalAssets = 0;
+	let fixedBudget = getBudget();
 
-    // 前月末までの全財産を計算
+    
+    // 選択月の開始日より前の日付について、総資産を加算・減算
     allDates.forEach(date => {
-        let currentDate = new Date('2025/' + date.replace(/月/g, '/').replace(/日/g, ''));
-        if (currentDate < selectedMonthStart) {
+    let currentDate = new Date('2025/' + date.replace(/月/g, '/').replace(/日/g, ''));
+    if (currentDate < selectedMonthStart) {
             totalAssets += allDailyTotal.income[date] || 0;
             totalAssets -= -(allDailyTotal.expense[date] || 0);
         }
-    });
+    
+
+    
+});
+// 今日以降の日付について、固定予算を減算
+    if (selectedMonthStart > today) {
+        let daysBetween = Math.floor((selectedMonthStart - today) / (1000 * 60 * 60 * 24));  // 日数の差を計算
+        totalAssets -= fixedBudget * daysBetween;  // 固定予算を減算
+    }
+
+
 
     // 今月のデータをフィルタリングし、dailyTotal に格納
     let existingDates = [];
@@ -1019,7 +1031,7 @@ if (!(date in dailyTotal.income)) {
 
     let summary = "<table><tr><th>日付</th><th>支出合計</th><th>収入合計</th><th>予算比累計</th><th>全財産の推移</th></tr>";
 
-    let fixedBudget = getBudget();
+    
     let newDailyBudgets = {};
     let cumulativeBudget = 0;
     let todayDate = (today.getMonth() + 1) + "月" + today.getDate() + "日";
